@@ -346,7 +346,7 @@ export default function VoiceRecordingApp() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-100 p-4 flex items-center justify-center">
         <div className="max-w-2xl bg-white rounded-2xl shadow-xl p-8">
-          <h2 className="text-3xl font-bold text-green-600 mb-4">🎉 Session Completed!</h2>
+          <h2 className="text-3xl font-bold text-green-600 mb-4">Session Completed!</h2>
           <p className="text-gray-700 mb-6">Thank you, {formData.name}, for completing all recordings. Your audio files have been successfully uploaded.</p>
         </div>
       </div>
