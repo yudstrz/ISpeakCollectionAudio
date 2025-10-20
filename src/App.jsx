@@ -325,7 +325,7 @@ export default function VoiceRecordingApp() {
           {isRecording && <button onClick={stopRecording} className="bg-red-500 text-white py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-red-600"><Square /> Stop Recording</button>}
           {audioURL && <audio src={audioURL} controls className="flex-1" />}
         </div>
-        
+
         {errors.length > 0 && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <ul className="list-disc list-inside text-red-700">
