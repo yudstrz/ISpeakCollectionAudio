@@ -1,5 +1,5 @@
 {
-  "name": "voice-recording-app",
+  "name": "I-Speak-Data-Collection",
   "version": "1.0.0",
   "private": true,
   "dependencies": {
@@ -31,4 +31,5 @@
       "last 1 safari version"
     ]
   }
+
 }
