@@ -131,6 +131,38 @@ export default function VoiceRecordingApp() {
         setAudioBlob(wavBlob);
         setAudioURL(URL.createObjectURL(wavBlob));
         stream.getTracks().forEach(track => track.stop());
+
+        // Upload otomatis setelah rekaman selesai dengan nama id_name.wav
+        setLoading(true);
+        const questionId = QUESTIONS[currentQuestion].id;
+        const fileName = `${questionId}_${formData.name.trim().replace(/[^a-zA-Z0-9]/g, '_')}.wav`; // Format: id_name.wav
+
+        try {
+          const uploadResponse = await fetch(
+            `${SUPABASE_URL}/storage/v1/object/audio/${fileName}`,
+            {
+              method: 'POST',
+              headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'audio/wav'
+              },
+              body: wavBlob
+            }
+          );
+
+          if (!uploadResponse.ok) throw new Error('Upload failed');
+
+          const publicURL = `${SUPABASE_URL}/storage/v1/object/public/audio/${fileName}`;
+          setUploadedAudios(prev => ({ ...prev, [questionId]: publicURL }));
+          setErrors([]);
+          setAudioBlob(null);
+          setAudioURL(null);
+        } catch (error) {
+          setErrors([`Upload error: ${error.message}`]);
+        } finally {
+          setLoading(false);
+        }
       };
 
       mediaRecorderRef.current.start();
@@ -213,51 +245,13 @@ export default function VoiceRecordingApp() {
     }
   };
 
-  const uploadAudio = async () => {
-    if (!audioBlob) return;
-
-    setLoading(true);
-    const questionId = QUESTIONS[currentQuestion].id;
-    const timestamp = Date.now();
-    const fileName = `${formData.name.replace(/[^a-zA-Z0-9]/g, '_')}_${questionId}_${timestamp}.wav`;
-
-    try {
-      const uploadResponse = await fetch(
-        `${SUPABASE_URL}/storage/v1/object/audio/${fileName}`,
-        {
-          method: 'POST',
-          headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`,
-            'Content-Type': 'audio/wav'
-          },
-          body: audioBlob
-        }
-      );
-
-      if (!uploadResponse.ok) throw new Error('Upload failed');
-
-      const publicURL = `${SUPABASE_URL}/storage/v1/object/public/audio/${fileName}`;
-      setUploadedAudios(prev => ({ ...prev, [questionId]: publicURL }));
-
-      setErrors([]);
-      setAudioBlob(null);
-      setAudioURL(null);
-    } catch (error) {
-      setErrors([`Upload error: ${error.message}`]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
     setLoading(true);
     const questionId = QUESTIONS[currentQuestion].id;
-    const timestamp = Date.now();
-    const fileName = `${formData.name.replace(/[^a-zA-Z0-9]/g, '_')}_${questionId}_${timestamp}_${file.name}`;
+    const fileName = `${questionId}_${formData.name.trim().replace(/[^a-zA-Z0-9]/g, '_')}.wav`; // Format: id_name.wav
 
     try {
       const uploadResponse = await fetch(
@@ -305,7 +299,6 @@ export default function VoiceRecordingApp() {
           )}
 
           <div className="space-y-4">
-            {/* Form Fields */}
             <input type="text" placeholder="Name *" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
             <select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
               <option value="">Select Gender *</option>
@@ -374,7 +367,7 @@ export default function VoiceRecordingApp() {
             <Upload /> Upload File
             <input type="file" accept="audio/*" onChange={handleFileUpload} className="hidden" />
           </label>
-          {audioBlob && !uploaded && <button onClick={uploadAudio} disabled={loading} className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:bg-gray-400">{loading ? 'Uploading...' : 'Upload Audio'}</button>}
+          {/* Tombol Upload Audio tetap dihapus karena upload otomatis */}
         </div>
 
         {errors.length > 0 && (
