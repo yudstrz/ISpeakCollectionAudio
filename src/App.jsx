@@ -50,11 +50,12 @@ export default function VoiceRecordingApp() {
   const [uploadedAudios, setUploadedAudios] = useState({});
   const [errors, setErrors] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showSuccessPopup, setShowSuccessPopup] = useState(false); // State for popup notification
-  const [uploadedFile, setUploadedFile] = useState(null); // State for uploaded file
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const audioBlobRef = useRef(null);
 
   const validateForm = () => {
     const newErrors = [];
@@ -108,7 +109,9 @@ export default function VoiceRecordingApp() {
       
       setErrors([]);
       setStep('recording');
-      setShowSuccessPopup(true); // Show popup on successful form submission
+      setSuccessMessage('Data participant berhasil disimpan!');
+      setShowSuccessPopup(true);
+      setTimeout(() => setShowSuccessPopup(false), 2000);
     } catch (error) {
       setErrors([`Error: ${error.message}`]);
     } finally {
@@ -130,38 +133,9 @@ export default function VoiceRecordingApp() {
       mediaRecorderRef.current.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         const wavBlob = await convertToWav(audioBlob);
+        audioBlobRef.current = wavBlob;
         setAudioURL(URL.createObjectURL(wavBlob));
         stream.getTracks().forEach(track => track.stop());
-
-        setLoading(true);
-        const questionId = QUESTIONS[currentQuestion].id;
-        const fileName = `${questionId}_${formData.name.trim().replace(/[^a-zA-Z0-9]/g, '_')}.wav`;
-
-        try {
-          const uploadResponse = await fetch(
-            `${SUPABASE_URL}/storage/v1/object/audio/${fileName}`,
-            {
-              method: 'POST',
-              headers: {
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`,
-                'Content-Type': 'audio/wav'
-              },
-              body: wavBlob
-            }
-          );
-
-          if (!uploadResponse.ok) throw new Error('Upload failed');
-
-          const publicURL = `${SUPABASE_URL}/storage/v1/object/public/audio/${fileName}`;
-          setUploadedAudios(prev => ({ ...prev, [questionId]: publicURL }));
-          setErrors([]);
-          setShowSuccessPopup(true); // Show popup on successful upload
-        } catch (error) {
-          setErrors([`Upload error: ${error.message}`]);
-        } finally {
-          setLoading(false);
-        }
       };
 
       mediaRecorderRef.current.start();
@@ -178,9 +152,9 @@ export default function VoiceRecordingApp() {
     }
   };
 
-  const handleFileUpload = async (file) => {
-    if (!file) return;
-
+  const handleUploadRecording = async () => {
+    if (!audioBlobRef.current) return;
+    
     setLoading(true);
     const questionId = QUESTIONS[currentQuestion].id;
     const fileName = `${questionId}_${formData.name.trim().replace(/[^a-zA-Z0-9]/g, '_')}.wav`;
@@ -195,7 +169,7 @@ export default function VoiceRecordingApp() {
             'Authorization': `Bearer ${SUPABASE_KEY}`,
             'Content-Type': 'audio/wav'
           },
-          body: file
+          body: audioBlobRef.current
         }
       );
 
@@ -204,7 +178,9 @@ export default function VoiceRecordingApp() {
       const publicURL = `${SUPABASE_URL}/storage/v1/object/public/audio/${fileName}`;
       setUploadedAudios(prev => ({ ...prev, [questionId]: publicURL }));
       setErrors([]);
-      setShowSuccessPopup(true); // Show popup on successful upload
+      setSuccessMessage('Audio berhasil diupload!');
+      setShowSuccessPopup(true);
+      setTimeout(() => setShowSuccessPopup(false), 2000);
     } catch (error) {
       setErrors([`Upload error: ${error.message}`]);
     } finally {
@@ -316,7 +292,7 @@ export default function VoiceRecordingApp() {
               <option value="Other">Other</option>
               <option value="Never Taken">Never Taken</option>
             </select>
-            <input type="number" placeholder="Test Score *" value={formData.testScore} onChange={e => setFormData({...formData, testScore: e.target.value})} disabled={formData.testType === 'Never Taken'} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" />
+            <input type="number" placeholder="Test Score *" value={formData.testScore} onChange={e => setFormData({...formData, testScore: e.target.value})} disabled={formData.testType === 'Never Taken'} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100" />
             <select value={formData.perception} onChange={e => setFormData({...formData, perception: e.target.value})} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
               <option value="">Select Perception *</option>
               <option value="Basic">Basic</option>
@@ -330,11 +306,11 @@ export default function VoiceRecordingApp() {
           </button>
         </div>
         {showSuccessPopup && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <div className="bg-white p-6 rounded-lg shadow-lg">
-              <p className="text-green-600 font-semibold">Success!</p>
-              <p className="text-gray-700">Data has been successfully saved.</p>
-              <button onClick={() => setShowSuccessPopup(false)} className="mt-4 bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700">Close</button>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm">
+              <p className="text-green-600 font-semibold text-lg">✓ Success!</p>
+              <p className="text-gray-700 mt-2">{successMessage}</p>
+              <button onClick={() => setShowSuccessPopup(false)} className="mt-4 bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 w-full">Close</button>
             </div>
           </div>
         )}
@@ -359,27 +335,65 @@ export default function VoiceRecordingApp() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 flex flex-col items-center justify-center">
       <div className="max-w-3xl w-full bg-white rounded-2xl shadow-xl p-8 space-y-6">
-        <h2 className="text-2xl font-bold text-gray-800">{question.instruction}</h2>
-        {question.text && <p className="text-gray-700">{question.text}</p>}
-        {question.hasImage && <img src={question.imageUrl} alt="Describe" className="rounded-lg mt-4" />}
+        <div className="mb-4">
+          <p className="text-sm text-gray-500 mb-2">Question {currentQuestion + 1} of {QUESTIONS.length}</p>
+          <h2 className="text-2xl font-bold text-gray-800">{question.instruction}</h2>
+        </div>
+        
+        {question.text && (
+          <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
+            <p className="text-gray-700 leading-relaxed">{question.text}</p>
+          </div>
+        )}
+        
+        {question.hasImage && <img src={question.imageUrl} alt="Describe" className="rounded-lg mt-4 w-full" />}
 
-        <div className="flex items-center gap-4 mt-4">
-          {!isRecording && <button onClick={startRecording} className="bg-green-500 text-white py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-green-600"><Mic /> Start Recording</button>}
-          {isRecording && <button onClick={stopRecording} className="bg-red-500 text-white py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-red-600"><Square /> Stop Recording</button>}
-          {audioURL && <audio src={audioURL} controls className="flex-1" />}
-          <input
-            type="file"
-            accept="audio/*"
-            onChange={async (e) => {
-              const file = e.target.files[0];
-              if (file) {
-                const wavBlob = await convertToWav(file); // Convert uploaded file to WAV if needed
-                setUploadedFile(wavBlob);
-                handleFileUpload(wavBlob);
-              }
-            }}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-          />
+        <div className="space-y-4">
+          <div className="flex items-center gap-4">
+            {!isRecording && !audioURL && (
+              <button 
+                onClick={startRecording} 
+                className="bg-green-500 text-white py-3 px-6 rounded-lg flex items-center gap-2 hover:bg-green-600 transition"
+              >
+                <Mic size={20} /> Start Recording
+              </button>
+            )}
+            {isRecording && (
+              <button 
+                onClick={stopRecording} 
+                className="bg-red-500 text-white py-3 px-6 rounded-lg flex items-center gap-2 hover:bg-red-600 transition animate-pulse"
+              >
+                <Square size={20} /> Stop Recording
+              </button>
+            )}
+          </div>
+
+          {audioURL && (
+            <div className="bg-gray-50 p-6 rounded-lg border-2 border-gray-200">
+              <p className="text-gray-700 font-semibold mb-3">Preview Audio Recording:</p>
+              <audio src={audioURL} controls className="w-full mb-4" />
+              <div className="flex gap-3">
+                <button
+                  onClick={handleUploadRecording}
+                  disabled={loading || uploaded}
+                  className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Uploading...' : uploaded ? 'Already Uploaded ✓' : 'Upload This Recording'}
+                </button>
+                <button
+                  onClick={() => {
+                    setAudioURL(null);
+                    audioBlobRef.current = null;
+                    setErrors([]);
+                  }}
+                  disabled={loading}
+                  className="bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition disabled:bg-gray-400"
+                >
+                  Re-record
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {errors.length > 0 && (
@@ -391,20 +405,24 @@ export default function VoiceRecordingApp() {
         )}
 
         <button
-          onClick={() => setCurrentQuestion(currentQuestion + 1)}
-          disabled={!uploaded && !uploadedFile}
-          className="w-full bg-gray-800 text-white py-3 rounded-lg font-semibold hover:bg-gray-900 transition flex items-center justify-center gap-2 disabled:bg-gray-400"
+          onClick={() => {
+            setCurrentQuestion(currentQuestion + 1);
+            setAudioURL(null);
+            audioBlobRef.current = null;
+          }}
+          disabled={!uploaded}
+          className="w-full bg-gray-800 text-white py-3 rounded-lg font-semibold hover:bg-gray-900 transition flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
           Next Question
           <ChevronRight size={20} />
         </button>
       </div>
       {showSuccessPopup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg shadow-lg">
-            <p className="text-green-600 font-semibold">Success!</p>
-            <p className="text-gray-700">Audio has been successfully uploaded.</p>
-            <button onClick={() => setShowSuccessPopup(false)} className="mt-4 bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700">Close</button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm">
+            <p className="text-green-600 font-semibold text-lg">✓ Success!</p>
+            <p className="text-gray-700 mt-2">{successMessage}</p>
+            <button onClick={() => setShowSuccessPopup(false)} className="mt-4 bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 w-full">Close</button>
           </div>
         </div>
       )}
