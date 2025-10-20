@@ -38,7 +38,7 @@ const QUESTIONS = [
   }
 ];
 
-export default function I-Speak Data Collection() {
+export default function ISpeakDataCollection() {
   const [step, setStep] = useState('form');
   const [formData, setFormData] = useState({
     name: '', gender: '', programStudy: '', city: '', age: '',
