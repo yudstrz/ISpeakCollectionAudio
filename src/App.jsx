@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Mic, Square, Upload, ChevronRight, Check, User } from 'lucide-react';
+import { Mic, Square, ChevronRight, Check, User } from 'lucide-react';
 
 const SUPABASE_URL = "https://gmsizfioshudejqqapwr.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdtc2l6Zmlvc2h1ZGVqcXFhcHdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5MTY4NjMsImV4cCI6MjA3MzQ5Mjg2M30.VaXNBtnxUmu__-_sKMuEZvJmJPoWk-pf_MD1gVoNlH4";
@@ -156,8 +156,7 @@ export default function VoiceRecordingApp() {
           const publicURL = `${SUPABASE_URL}/storage/v1/object/public/audio/${fileName}`;
           setUploadedAudios(prev => ({ ...prev, [questionId]: publicURL }));
           setErrors([]);
-          setAudioBlob(null);
-          setAudioURL(null);
+          // Tidak reset audioBlob dan audioURL agar preview tetap ada
         } catch (error) {
           setErrors([`Upload error: ${error.message}`]);
         } finally {
@@ -245,41 +244,6 @@ export default function VoiceRecordingApp() {
     }
   };
 
-  const handleFileUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    setLoading(true);
-    const questionId = QUESTIONS[currentQuestion].id;
-    const fileName = `${questionId}_${formData.name.trim().replace(/[^a-zA-Z0-9]/g, '_')}.wav`; // Format: id_name.wav
-
-    try {
-      const uploadResponse = await fetch(
-        `${SUPABASE_URL}/storage/v1/object/audio/${fileName}`,
-        {
-          method: 'POST',
-          headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`,
-            'Content-Type': file.type
-          },
-          body: file
-        }
-      );
-
-      if (!uploadResponse.ok) throw new Error('Upload failed');
-
-      const publicURL = `${SUPABASE_URL}/storage/v1/object/public/audio/${fileName}`;
-      setUploadedAudios(prev => ({ ...prev, [questionId]: publicURL }));
-
-      setErrors([]);
-    } catch (error) {
-      setErrors([`Upload error: ${error.message}`]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   if (step === 'form') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -361,15 +325,7 @@ export default function VoiceRecordingApp() {
           {isRecording && <button onClick={stopRecording} className="bg-red-500 text-white py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-red-600"><Square /> Stop Recording</button>}
           {audioURL && <audio src={audioURL} controls className="flex-1" />}
         </div>
-
-        <div className="flex items-center gap-4 mt-4">
-          <label className="cursor-pointer bg-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 flex items-center gap-2">
-            <Upload /> Upload File
-            <input type="file" accept="audio/*" onChange={handleFileUpload} className="hidden" />
-          </label>
-          {/* Tombol Upload Audio tetap dihapus karena upload otomatis */}
-        </div>
-
+        
         {errors.length > 0 && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <ul className="list-disc list-inside text-red-700">
