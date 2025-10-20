@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Mic, Square, Upload, ChevronRight, Check, User } from 'lucide-react';
 
 const SUPABASE_URL = "https://gmsizfioshudejqqapwr.supabase.co";
@@ -122,9 +122,7 @@ export default function VoiceRecordingApp() {
       audioChunksRef.current = [];
 
       mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
       };
 
       mediaRecorderRef.current.onstop = async () => {
@@ -138,7 +136,7 @@ export default function VoiceRecordingApp() {
       mediaRecorderRef.current.start();
       setIsRecording(true);
     } catch (error) {
-      alert('Error accessing microphone: ' + error.message);
+      setErrors([`Error accessing microphone: ${error.message}`]);
     }
   };
 
@@ -163,20 +161,14 @@ export default function VoiceRecordingApp() {
     const sampleRate = buffer.sampleRate;
     const format = 1;
     const bitDepth = 16;
-    
     const bytesPerSample = bitDepth / 8;
     const blockAlign = numChannels * bytesPerSample;
-    
     const data = [];
-    for (let i = 0; i < buffer.numberOfChannels; i++) {
-      data.push(buffer.getChannelData(i));
-    }
-    
+    for (let i = 0; i < buffer.numberOfChannels; i++) data.push(buffer.getChannelData(i));
     const interleaved = interleave(data);
     const dataLength = interleaved.length * bytesPerSample;
     const headerLength = 44;
     const totalLength = headerLength + dataLength;
-    
     const arrayBuffer = new ArrayBuffer(totalLength);
     const view = new DataView(arrayBuffer);
     
@@ -195,7 +187,6 @@ export default function VoiceRecordingApp() {
     view.setUint32(40, dataLength, true);
     
     floatTo16BitPCM(view, 44, interleaved);
-    
     return arrayBuffer;
   };
 
@@ -212,9 +203,7 @@ export default function VoiceRecordingApp() {
   };
 
   const writeString = (view, offset, string) => {
-    for (let i = 0; i < string.length; i++) {
-      view.setUint8(offset + i, string.charCodeAt(i));
-    }
+    for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
   };
 
   const floatTo16BitPCM = (view, offset, input) => {
@@ -250,12 +239,12 @@ export default function VoiceRecordingApp() {
 
       const publicURL = `${SUPABASE_URL}/storage/v1/object/public/audio/${fileName}`;
       setUploadedAudios(prev => ({ ...prev, [questionId]: publicURL }));
-      
-      alert('✅ Audio uploaded successfully!');
+
+      setErrors([]);
       setAudioBlob(null);
       setAudioURL(null);
     } catch (error) {
-      alert('Upload error: ' + error.message);
+      setErrors([`Upload error: ${error.message}`]);
     } finally {
       setLoading(false);
     }
@@ -288,10 +277,10 @@ export default function VoiceRecordingApp() {
 
       const publicURL = `${SUPABASE_URL}/storage/v1/object/public/audio/${fileName}`;
       setUploadedAudios(prev => ({ ...prev, [questionId]: publicURL }));
-      
-      alert('✅ File uploaded successfully!');
+
+      setErrors([]);
     } catch (error) {
-      alert('Upload error: ' + error.message);
+      setErrors([`Upload error: ${error.message}`]);
     } finally {
       setLoading(false);
     }
@@ -316,69 +305,19 @@ export default function VoiceRecordingApp() {
           )}
 
           <div className="space-y-4">
-            <input
-              type="text"
-              placeholder="Name *"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
-            />
-
-            <select
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-              value={formData.gender}
-              onChange={(e) => setFormData({...formData, gender: e.target.value})}
-            >
+            {/* Form Fields */}
+            <input type="text" placeholder="Name *" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+            <select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
               <option value="">Select Gender *</option>
               <option value="Male">Male</option>
               <option value="Female">Female</option>
             </select>
-
-            <input
-              type="text"
-              placeholder="Program Study *"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-              value={formData.programStudy}
-              onChange={(e) => setFormData({...formData, programStudy: e.target.value})}
-            />
-
-            <input
-              type="text"
-              placeholder="City *"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-              value={formData.city}
-              onChange={(e) => setFormData({...formData, city: e.target.value})}
-            />
-
-            <input
-              type="number"
-              placeholder="Age *"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-              value={formData.age}
-              onChange={(e) => setFormData({...formData, age: e.target.value})}
-            />
-
-            <input
-              type="text"
-              placeholder="Current Residence *"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-              value={formData.currentResidence}
-              onChange={(e) => setFormData({...formData, currentResidence: e.target.value})}
-            />
-
-            <input
-              type="text"
-              placeholder="Campus *"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-              value={formData.campus}
-              onChange={(e) => setFormData({...formData, campus: e.target.value})}
-            />
-
-            <select
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-              value={formData.testType}
-              onChange={(e) => setFormData({...formData, testType: e.target.value, testScore: e.target.value === 'Never Taken' ? '0' : formData.testScore})}
-            >
+            <input type="text" placeholder="Program Study *" value={formData.programStudy} onChange={e => setFormData({...formData, programStudy: e.target.value})} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" />
+            <input type="text" placeholder="City *" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" />
+            <input type="number" placeholder="Age *" value={formData.age} onChange={e => setFormData({...formData, age: e.target.value})} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" />
+            <input type="text" placeholder="Current Residence *" value={formData.currentResidence} onChange={e => setFormData({...formData, currentResidence: e.target.value})} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" />
+            <input type="text" placeholder="Campus *" value={formData.campus} onChange={e => setFormData({...formData, campus: e.target.value})} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" />
+            <select value={formData.testType} onChange={e => setFormData({...formData, testType: e.target.value, testScore: e.target.value === 'Never Taken' ? '0' : formData.testScore})} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
               <option value="">Select Test Type *</option>
               <option value="TOEFL">TOEFL</option>
               <option value="IELTS">IELTS</option>
@@ -386,21 +325,8 @@ export default function VoiceRecordingApp() {
               <option value="Other">Other</option>
               <option value="Never Taken">Never Taken</option>
             </select>
-
-            <input
-              type="number"
-              placeholder="Test Score *"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-              value={formData.testScore}
-              onChange={(e) => setFormData({...formData, testScore: e.target.value})}
-              disabled={formData.testType === 'Never Taken'}
-            />
-
-            <select
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-              value={formData.perception}
-              onChange={(e) => setFormData({...formData, perception: e.target.value})}
-            >
+            <input type="number" placeholder="Test Score *" value={formData.testScore} onChange={e => setFormData({...formData, testScore: e.target.value})} disabled={formData.testType === 'Never Taken'} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" />
+            <select value={formData.perception} onChange={e => setFormData({...formData, perception: e.target.value})} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
               <option value="">Select Perception *</option>
               <option value="Basic">Basic</option>
               <option value="Intermediate">Intermediate</option>
@@ -408,17 +334,8 @@ export default function VoiceRecordingApp() {
             </select>
           </div>
 
-          <button
-            onClick={handleSubmitForm}
-            disabled={loading}
-            className="w-full mt-6 bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-2 disabled:bg-gray-400"
-          >
-            {loading ? 'Saving...' : (
-              <>
-                <Check size={20} />
-                Proceed to Recording Session
-              </>
-            )}
+          <button onClick={handleSubmitForm} disabled={loading} className="w-full mt-6 bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-2 disabled:bg-gray-400">
+            {loading ? 'Saving...' : (<><Check size={20}/>Proceed to Recording Session</>)}
           </button>
         </div>
       </div>
@@ -430,118 +347,52 @@ export default function VoiceRecordingApp() {
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-100 p-4 flex items-center justify-center">
         <div className="max-w-2xl bg-white rounded-2xl shadow-xl p-8">
           <h2 className="text-3xl font-bold text-green-600 mb-4">🎉 Session Completed!</h2>
-          <p className="text-gray-700 mb-6">All questions have been recorded. Thank you for participating!</p>
-          <div className="space-y-3">
-            {Object.entries(uploadedAudios).map(([key, url]) => (
-              <div key={key} className="border border-gray-200 rounded-lg p-4">
-                <p className="font-semibold text-gray-800 mb-2">{key}</p>
-                <audio controls src={url} className="w-full" />
-              </div>
-            ))}
-          </div>
+          <p className="text-gray-700 mb-6">Thank you, {formData.name}, for completing all recordings. Your audio files have been successfully uploaded.</p>
         </div>
       </div>
     );
   }
 
   const question = QUESTIONS[currentQuestion];
+  const uploaded = uploadedAudios[question.id];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-4">
-      <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl p-8">
-        <div className="mb-6">
-          <p className="text-sm text-gray-600">Participant: <strong>{formData.name}</strong></p>
-          <div className="flex items-center gap-2 mt-2">
-            <div className="flex-1 bg-gray-200 rounded-full h-2">
-              <div 
-                className="bg-indigo-600 h-2 rounded-full transition-all"
-                style={{width: `${((currentQuestion + 1) / QUESTIONS.length) * 100}%`}}
-              />
-            </div>
-            <span className="text-sm text-gray-600">{currentQuestion + 1}/{QUESTIONS.length}</span>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 flex flex-col items-center justify-center">
+      <div className="max-w-3xl w-full bg-white rounded-2xl shadow-xl p-8 space-y-6">
+        <h2 className="text-2xl font-bold text-gray-800">{question.instruction}</h2>
+        {question.text && <p className="text-gray-700">{question.text}</p>}
+        {question.hasImage && <img src={question.imageUrl} alt="Describe" className="rounded-lg mt-4" />}
+
+        <div className="flex items-center gap-4 mt-4">
+          {!isRecording && <button onClick={startRecording} className="bg-green-500 text-white py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-green-600"><Mic /> Start Recording</button>}
+          {isRecording && <button onClick={stopRecording} className="bg-red-500 text-white py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-red-600"><Square /> Stop Recording</button>}
+          {audioURL && <audio src={audioURL} controls className="flex-1" />}
         </div>
 
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">
-          Question {currentQuestion + 1}: {question.id}
-        </h2>
-        <p className="text-gray-700 mb-4"><strong>Instruction:</strong> {question.instruction}</p>
-        
-        {question.text && (
-          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
-            <p className="text-gray-800">{question.text}</p>
+        <div className="flex items-center gap-4 mt-4">
+          <label className="cursor-pointer bg-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 flex items-center gap-2">
+            <Upload /> Upload File
+            <input type="file" accept="audio/*" onChange={handleFileUpload} className="hidden" />
+          </label>
+          {audioBlob && !uploaded && <button onClick={uploadAudio} disabled={loading} className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:bg-gray-400">{loading ? 'Uploading...' : 'Upload Audio'}</button>}
+        </div>
+
+        {errors.length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <ul className="list-disc list-inside text-red-700">
+              {errors.map((err, idx) => <li key={idx}>{err}</li>)}
+            </ul>
           </div>
         )}
 
-        {question.hasImage && (
-          <img 
-            src={question.imageUrl} 
-            alt="Description prompt" 
-            className="w-full rounded-lg mb-4 shadow-md"
-          />
-        )}
-
-        <div className="space-y-4">
-          <div className="flex gap-3">
-            <button
-              onClick={isRecording ? stopRecording : startRecording}
-              className={`flex-1 py-4 rounded-lg font-semibold text-white transition flex items-center justify-center gap-2 ${
-                isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'
-              }`}
-            >
-              {isRecording ? (
-                <>
-                  <Square size={20} />
-                  Stop Recording
-                </>
-              ) : (
-                <>
-                  <Mic size={20} />
-                  Start Recording
-                </>
-              )}
-            </button>
-
-            <label className="flex-1 py-4 rounded-lg font-semibold text-white bg-blue-500 hover:bg-blue-600 transition flex items-center justify-center gap-2 cursor-pointer">
-              <Upload size={20} />
-              Upload File
-              <input
-                type="file"
-                accept="audio/*"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-            </label>
-          </div>
-
-          {audioURL && (
-            <div className="border border-gray-200 rounded-lg p-4">
-              <audio controls src={audioURL} className="w-full mb-3" />
-              <button
-                onClick={uploadAudio}
-                disabled={loading}
-                className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition disabled:bg-gray-400"
-              >
-                {loading ? 'Uploading...' : 'Upload This Recording'}
-              </button>
-            </div>
-          )}
-
-          {uploadedAudios[question.id] && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="text-green-800 font-semibold mb-2">✅ Audio uploaded for this question</p>
-              <audio controls src={uploadedAudios[question.id]} className="w-full" />
-            </div>
-          )}
-
-          <button
-            onClick={() => setCurrentQuestion(currentQuestion + 1)}
-            className="w-full bg-gray-800 text-white py-3 rounded-lg font-semibold hover:bg-gray-900 transition flex items-center justify-center gap-2"
-          >
-            Next Question
-            <ChevronRight size={20} />
-          </button>
-        </div>
+        <button
+          onClick={() => setCurrentQuestion(currentQuestion + 1)}
+          disabled={!uploaded}
+          className="w-full bg-gray-800 text-white py-3 rounded-lg font-semibold hover:bg-gray-900 transition flex items-center justify-center gap-2 disabled:bg-gray-400"
+        >
+          Next Question
+          <ChevronRight size={20} />
+        </button>
       </div>
     </div>
   );
