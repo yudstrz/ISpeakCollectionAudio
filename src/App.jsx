@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Mic, Square, ChevronRight, Check, User } from 'lucide-react';
 
 const SUPABASE_URL = "https://gmsizfioshudejqqapwr.supabase.co";
@@ -38,7 +38,7 @@ const QUESTIONS = [
   }
 ];
 
-export default function VoiceRecordingApp() {
+export default function I-Speak Data Collection() {
   const [step, setStep] = useState('form');
   const [formData, setFormData] = useState({
     name: '', gender: '', programStudy: '', city: '', age: '',
@@ -56,6 +56,15 @@ export default function VoiceRecordingApp() {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const audioBlobRef = useRef(null);
+
+  // Efek untuk mereset popup dan error saat transisi ke recording
+  useEffect(() => {
+    if (step === 'recording') {
+      setShowSuccessPopup(false);
+      setSuccessMessage('');
+      setErrors([]);
+    }
+  }, [step]);
 
   const validateForm = () => {
     const newErrors = [];
@@ -112,6 +121,9 @@ export default function VoiceRecordingApp() {
       setSuccessMessage('Data participant berhasil disimpan!');
       setShowSuccessPopup(true);
       setTimeout(() => setShowSuccessPopup(false), 2000);
+      // Reset eksplisit untuk mencegah kebocoran popup
+      setShowSuccessPopup(false);
+      setSuccessMessage('');
     } catch (error) {
       setErrors([`Error: ${error.message}`]);
     } finally {
@@ -153,7 +165,10 @@ export default function VoiceRecordingApp() {
   };
 
   const handleUploadRecording = async () => {
-    if (!audioBlobRef.current) return;
+    if (!audioBlobRef.current || audioBlobRef.current.size === 0) {
+      setErrors(['No audio recorded. Please record first.']);
+      return;
+    }
     
     setLoading(true);
     const questionId = QUESTIONS[currentQuestion].id;
@@ -260,7 +275,7 @@ export default function VoiceRecordingApp() {
         <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-6 flex items-center gap-3">
             <User className="text-indigo-600" />
-            Participant Data Form
+            I-Speak Participant Data Form
           </h1>
 
           {errors.length > 0 && (
@@ -324,6 +339,23 @@ export default function VoiceRecordingApp() {
         <div className="max-w-2xl bg-white rounded-2xl shadow-xl p-8">
           <h2 className="text-3xl font-bold text-green-600 mb-4">Session Completed!</h2>
           <p className="text-gray-700 mb-6">Thank you, {formData.name}, for completing all recordings. Your audio files have been successfully uploaded.</p>
+          <button
+            onClick={() => {
+              if (window.confirm('Apakah Anda yakin ingin kembali ke formulir? Sesi rekaman akan direset.')) {
+                setStep('form');
+                setCurrentQuestion(0);
+                setUploadedAudios({});
+                setAudioURL(null);
+                audioBlobRef.current = null;
+                setErrors([]);
+                setShowSuccessPopup(false);
+                setFormData({ name: '', gender: '', programStudy: '', city: '', age: '', currentResidence: '', campus: '', testType: '', testScore: '', perception: '' });
+              }
+            }}
+            className="w-full mt-6 bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-2"
+          >
+            <Check size={20} /> Selesai dan Kembali ke Formulir
+          </button>
         </div>
       </div>
     );
